@@ -7,6 +7,7 @@
 #include "../Logging.h"
 #include <sstream>
 #include <filesystem>
+#include <ext.hpp>
 
 Shader::Shader(std::string filepath) {
     ShaderProgramSource source = ParseShader(filepath);
@@ -42,6 +43,10 @@ void Shader::SetUniform1f(const std::string& name, float f0) {
 
 void Shader::SetUniform3f(const std::string& name, float f0, float f1, float f2) {
     glUniform3f(GetUniformLocation(name), f0, f1, f2);
+}
+
+void Shader::SetUniformMatrix4fv(const std::string& name, glm::mat4& matrix) {
+    glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(matrix));
 }
 
 unsigned int Shader::CreateShader(std::string& vertexShader, std::string& fragmentShader) {

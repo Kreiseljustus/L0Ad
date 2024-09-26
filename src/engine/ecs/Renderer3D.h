@@ -1,28 +1,34 @@
 #pragma once
 
-#include "Application.h"
+#include "Component.h"
+#include "../rendering/Renderer.h"
+#include "TransformComponent.h"
+#include "ext.hpp"
 
-#include "rendering/Shader.h"
-#include "rendering/VertexArray.h"
-#include "rendering/VertexBuffer.h"
-#include "rendering/IndexBuffer.h"
-#include "rendering/Renderer.h"
-
-namespace Editor {
-	class EditorApplication : public Engine::Application {
+namespace Engine {
+	class Renderer3D : public Component {
 	public:
-		EditorApplication();
-		virtual ~EditorApplication();
+        Renderer3D();
 
-	protected:
+		virtual void onRender(glm::mat4& view) override;
 		virtual void onUpdate() override;
-		virtual void onRender() override;
-		virtual void onEvent(GLFWwindow* window, int key, int scancode, int action, int mods) override;
+		virtual void onRenderEditor(glm::mat4& view) override;
+		virtual void onConstruction() override;
+		virtual void onDestruction() override;
 
-        virtual void pastInit() override;
+        void setShader(Shader* s) {
+            shader = s;
+        };
 
+        void setRenderer(Renderer* r) {
+            renderer = r;
+        };
 
-        float vertices[144] = {
+        virtual void onAttach() override;
+	private:
+        TransformComponent* transform;
+
+        float vert[144] = {
             // Vertex positions       // Normals
 
             // Front face (z = 0.5)
@@ -86,7 +92,8 @@ namespace Editor {
         VertexBuffer* vb = nullptr;
         VertexBufferLayout* layout = nullptr;
         IndexBuffer* ib = nullptr;
-        Shader* shader = nullptr;
-        Renderer* renderer = nullptr;
+
+        Renderer* renderer;
+        Shader* shader;
 	};
 }
