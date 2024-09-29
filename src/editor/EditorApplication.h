@@ -15,11 +15,13 @@ namespace Editor {
 		virtual ~EditorApplication();
 
 	protected:
-		virtual void onUpdate() override;
-		virtual void onRender() override;
-		virtual void onEvent(GLFWwindow* window, int key, int scancode, int action, int mods) override;
+		virtual void onUpdate(double deltatime) override;
+		virtual void onRender(double deltatime) override;
+		virtual void onKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods) override;
+        virtual void onMouseEvent(GLFWwindow* window, double xPos, double yPos) override;
+        virtual void onMouseButtonEvent(GLFWwindow* window, int button, int action, int mods) override;
 
-        virtual void pastInit() override;
+        virtual void pastInit(float* targetFPS) override;
 
 
         float vertices[144] = {

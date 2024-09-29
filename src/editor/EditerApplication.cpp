@@ -1,4 +1,4 @@
-#include "EditorApplication.h"
+﻿#include "EditorApplication.h"
 
 #include "Logging.h"
 #include "glm.hpp"
@@ -13,14 +13,38 @@
 #include "ecs/TransformComponent.h"
 #include "ecs/Renderer3D.h"
 
+#include "EditorCam.h"
+#include <string.h>
+
 namespace Editor {
 	EditorApplication::EditorApplication() {
 
 	}
 	EditorApplication::~EditorApplication() {}
 
-	void EditorApplication::onUpdate() {
-		//DO STUFF
+	EditorCam camera(glm::vec3(0.0f, 0.0f, -3.0f), glm::vec3(0.0f, 1.0f, 0.0f), 0, 0);
+	bool mouseControl = false;
+
+	void EditorApplication::onUpdate(double deltatime) {
+		//Handle input for editor camera
+		if (mouseControl) {
+			float velocity = camera.MovementSpeed * deltatime;
+			if (glfwGetKey(m_Window, GLFW_KEY_W) == GLFW_PRESS) {
+				camera.Position += camera.Front * velocity;
+			}
+
+			if (glfwGetKey(m_Window, GLFW_KEY_A) == GLFW_PRESS) {
+				camera.Position -= camera.Right * velocity;
+			}
+
+			if (glfwGetKey(m_Window, GLFW_KEY_S) == GLFW_PRESS) {
+				camera.Position -= camera.Front * velocity;
+			}
+
+			if (glfwGetKey(m_Window, GLFW_KEY_D) == GLFW_PRESS) {
+				camera.Position += camera.Right * velocity;
+			}
+		}
 	}
 
 	Engine::GameObject object;
@@ -112,9 +136,15 @@ namespace Editor {
 		style.TabRounding = 4;
 	}
 
-	void EditorApplication::pastInit() {
+	glm::mat4 view(1.0f);
+	float* e_targetFPS;
 
+	void EditorApplication::pastInit(float* targetFPS) {
+		e_targetFPS = targetFPS;
 		glClearColor(0, 0.5, 0.5, 1);
+
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+
 		shader = new Shader("assets/shaders/Basic.shader");
 		shader->Bind();
 		vb = new VertexBuffer(vertices, 24 * 6 * sizeof(float));
@@ -168,7 +198,7 @@ namespace Editor {
 
 	bool componentListOpen = false;
 
-	void EditorApplication::onRender() {
+	void EditorApplication::onRender(double deltatime) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		//DO STUFF TO RENDER EDITOR UI
 		ImGui_ImplGlfw_NewFrame();
@@ -182,7 +212,7 @@ namespace Editor {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
-		ImGui::Begin("Hmm", nullptr);
+		ImGui::Begin("Editor oder so", nullptr);
 
 		ImGui::PopStyleVar(2);
 
@@ -197,9 +227,22 @@ namespace Editor {
 
 		ImGui::End();
 
-		ImGui::Begin("Inspector");
+		ImGui::Begin("Debug"); 
 
-		glm::mat4 view = glm::mat4(1.0f);
+		std::string ldt = "Last delta time = " + std::to_string(deltatime);
+		std::string frameRate = "Target frame rate: " + std::to_string(*targetFPS);
+		ImGui::Text(ldt.c_str());
+		ImGui::Text(frameRate.c_str());
+	
+		ImGui::InputFloat("Target fps", e_targetFPS);
+
+		ImGui::End();
+
+		ImGui::Begin("Inspector");
+		//TODO: Put inspector in own class
+		char placeHolder[128];
+		ImGui::InputTextWithHint("Name", "Name of the selected gameobject", placeHolder, 128);
+
 		object.onRenderEditor(view);
 
 		float windowWidth = ImGui::GetWindowSize().x;
@@ -215,7 +258,7 @@ namespace Editor {
 
 		if (componentListOpen) {
 			ImGui::SetCursorPosX(xOffset / 2);
-			ImGui::ListBox("�", &listBoxIndex, componentsList, 3);
+			ImGui::ListBox(" ", &listBoxIndex, componentsList, 3);
 		}
 
 		ImGui::End();
@@ -246,14 +289,13 @@ namespace Editor {
 
 		model = glm::scale(model, transform->scale);*/
 
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
 		glm::mat4 projection = glm::perspective(glm::radians(60.0f), float(m_Width) / (float)m_Height, 0.1f, 100.0f);
 
 
 
 		int viewLoc = glGetUniformLocation(shader->Get(), "view");
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(camera.GetViewMatrix()));
 
 		int projectionLoc = glGetUniformLocation(shader->Get(), "projection");
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
@@ -270,14 +312,60 @@ namespace Editor {
 		count++;
 	}
 
-	void EditorApplication::onEvent(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	void EditorApplication::onKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods) {
+
 		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 			glfwSetWindowShouldClose(window, true);
 		}
 
 		if (key == GLFW_KEY_R && action == GLFW_PRESS) {
 			Shader shader("assets/shaders/Basic.shader");
-			shader.Bind();
+			Orenderer.setShader(&shader);
+		}
+	}
+
+	float currentMousePosX;
+	float currentMousePosY;
+
+	float lastX;
+	float lastY;
+
+	void EditorApplication::onMouseEvent(GLFWwindow* window, double xPos, double yPos) {
+		currentMousePosX = xPos;
+		currentMousePosY = yPos;
+		if (!mouseControl) return;
+
+		float xoffset = xPos - lastX;
+		float yoffset = lastY - yPos;  // Reversed since y-coordinates go from bottom to top
+		lastX = xPos;
+		lastY = yPos;
+
+		xoffset *= camera.MouseSensitivity;
+		yoffset *= camera.MouseSensitivity;
+
+		camera.Yaw += xoffset;
+		camera.Pitch += yoffset;
+
+		// Make sure that when pitch is out of bounds, the screen doesn't get flipped
+		if (camera.Pitch > 89.0f)
+			camera.Pitch = 89.0f;
+		if (camera.Pitch < -89.0f)
+			camera.Pitch = -89.0f;
+
+		camera.updateCameraVectors();
+	}
+
+	void EditorApplication::onMouseButtonEvent(GLFWwindow* window, int button, int action, int mods) {
+		if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			mouseControl = true;
+
+			lastX = currentMousePosX;
+			lastY = currentMousePosY;
+		}
+		if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			mouseControl = false;
 		}
 	}
 

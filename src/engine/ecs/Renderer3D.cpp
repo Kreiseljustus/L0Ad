@@ -4,11 +4,12 @@
 
 namespace Engine {
 	void Renderer3D::onRenderEditor(glm::mat4& view) {
-		ImGui::Separator();
+		ImGui::BeginChild("Renderer3D", ImVec2(0, 0), ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeY);
 
-		ImGui::BeginChild("Renderer3D");
+		ImGui::TextDisabled("Renderer3D");
 
 		ImGui::EndChild();
+		ImGui::Separator();
 	}
 
 	void Renderer3D::onConstruction() {
@@ -39,6 +40,7 @@ namespace Engine {
 	}
 
 	void Renderer3D::onRender(glm::mat4& view) {
+		print(shader);
 		shader->Bind();
 
 		glm::mat4 model = glm::mat4(1.0f);
@@ -56,7 +58,9 @@ namespace Engine {
 
 		//view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
+		print("Uniform ");
 		shader->SetUniformMatrix4fv("model", model);
+		print("After uniform");
 
 		renderer->Draw(*va, *ib, *shader);
 	}

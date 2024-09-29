@@ -55,23 +55,56 @@ namespace Engine {
 		glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
 			Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
 			if (app) {
-				app->onEvent(window, key, scancode, action, mods);
+				app->onKeyEvent(window, key, scancode, action, mods);
+			}
+			});
+
+		glfwSetCursorPosCallback(m_Window, [](GLFWwindow* window, double xPos, double yPos) {
+			Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+			if (app) {
+				app->onMouseEvent(window, xPos, yPos);
+			}
+			});
+
+		glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, int button, int action, int mods) {
+			Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+			if (app) {
+				app->onMouseButtonEvent(window, button, action, mods);
 			}
 			});
 
 		glEnable(GL_DEBUG_OUTPUT);
 		glDebugMessageCallback(errorCallback, 0);
 
-		pastInit();
+		pastInit(targetFPS);
 
 		return true;
 	}
 
 	void Application::run() {
-		while (!glfwWindowShouldClose(m_Window)) {
-			onUpdate();
 
-			onRender();
+		double lastTime = glfwGetTime();
+		double deltaTime = 0.0;
+		while (!glfwWindowShouldClose(m_Window)) {
+			float targetFPS = this->FPS;
+			if (targetFPS == 0) targetFPS = 0.01f;
+			float targetFrameTime = 1.0f / targetFPS;
+			double currentTime = glfwGetTime();
+			deltaTime = currentTime - lastTime;
+			lastTime = currentTime;
+
+			onUpdate(deltaTime);
+
+			onRender(deltaTime);
+
+			double frameTime = glfwGetTime() - currentTime;
+
+			if (frameTime < targetFrameTime) {
+				double sleepTime = targetFrameTime - frameTime;
+				glfwWaitEventsTimeout(sleepTime);
+
+				//Add a way to tell applications they can do some background work?
+			}
 
 			glfwSwapBuffers(m_Window);
 			glfwPollEvents();
