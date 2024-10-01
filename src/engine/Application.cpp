@@ -87,7 +87,7 @@ namespace Engine {
 		double deltaTime = 0.0;
 		while (!glfwWindowShouldClose(m_Window)) {
 			float targetFPS = this->FPS;
-			if (targetFPS == 0) targetFPS = 0.01f;
+			if (targetFPS <= 0) targetFPS = 0.01f;
 			float targetFrameTime = 1.0f / targetFPS;
 			double currentTime = glfwGetTime();
 			deltaTime = currentTime - lastTime;
